@@ -113,6 +113,7 @@ RATES = [
 COMMODITIES = [
     ("CL=F", "WTI 유가", "usd"), ("GC=F", "금", "usd"), ("SI=F", "은", "usd"),
     ("HG=F", "구리", "usd"),     ("NG=F", "천연가스", "usd"),
+    ("PL=F", "백금", "usd"),
 ]
 FX = [
     ("KRW=X", "원/달러", "krw"),    ("JPYKRW=X", "원/엔", "krw"),
