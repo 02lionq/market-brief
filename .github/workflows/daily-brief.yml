@@ -1,0 +1,65 @@
+# 매일 아침 미국장 브리핑을 만들어 웹사이트에 올린다.
+# 이 파일이 깃허브 서버에게 "언제 무엇을 하라"고 알려주는 지시서다.
+
+name: 미국장 브리핑
+
+on:
+  schedule:
+    # 깃허브는 세계표준시(UTC)로 움직인다. 한국은 UTC+9 이므로
+    # 한국 아침 7시 30분 = 전날 UTC 22시 30분.
+    # 월~금 22:30 UTC = 화~토 07:30 한국시각 (미국장이 열린 다음 날 아침)
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch: # 깃허브 페이지에서 버튼으로 직접 실행할 때 쓴다
+
+permissions:
+  contents: write # 만든 브리핑을 저장소에 다시 저장하려면 필요
+
+concurrency:
+  group: daily-brief
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 저장소 내려받기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 준비
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 라이브러리 설치
+        run: pip install -r requirements.txt
+
+      - name: 브리핑 만들기
+        env:
+          # 아래 키는 저장소 Settings > Secrets 에 넣어둔 값이다.
+          # 비어 있어도 AI 요약·번역만 빠지고 나머지는 정상 생성된다.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BRIEF_OUTPUT_DIR: docs # 웹사이트로 공개될 폴더
+          BRIEF_NO_OPEN: "1" # 서버에는 브라우저가 없다
+        run: python brief.py
+
+      - name: 결과 저장하기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          # 바뀐 게 없으면(예: 휴장일) 그냥 넘어간다
+          if git diff --staged --quiet; then
+            echo "바뀐 내용이 없어 저장을 건너뜁니다."
+          else
+            git commit -m "브리핑 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: 요약
+        run: |
+          echo "### 미국장 브리핑 생성 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ls -1 docs/brief-*.html | tail -3 >> $GITHUB_STEP_SUMMARY

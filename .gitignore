@@ -1,0 +1,7 @@
+.venv/
+output/
+cache/
+__pycache__/
+.env
+last-run.log
+watchlist.json
